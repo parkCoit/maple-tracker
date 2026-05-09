@@ -81,7 +81,7 @@ if 'logged_in' not in st.session_state:
     st.session_state.logged_in, st.session_state.current_user = False, ""
 
 if not st.session_state.logged_in:
-    st.title("🍁 Maple Hunting Tracker")
+    st.title("🍁 이성호 바보 멍충이")
     st.info("친구와 함께 사용하는 사냥 기록기입니다.")
 
     login_nickname = st.text_input("캐릭터 닉네임")
