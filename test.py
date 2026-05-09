@@ -104,8 +104,17 @@ if not st.session_state.logged_in:
 user_nickname = st.session_state.current_user
 char_data = get_character_info(user_nickname)
 
+# 서버별 기본 시세 정의 (서버가 늘어나면 여기에 추가하면 됩니다)
+default_f_price = 500  # 기본 조각 가격
+default_g_price = 200  # 기본 코잼 가격
+
 if char_data:
     world = char_data['world_name']
+    # 서버별 맞춤 시세 설정
+    if world == "스카니아":
+        default_f_price, default_g_price = 600, 10
+    elif world == "크로아":
+        default_f_price, default_g_price = 700, 10
     st.markdown(f"""
     <div style="background: linear-gradient(135deg, #1e272e, #2d3436); padding: 30px; border-radius: 20px; display: flex; align-items: center; color: white; border: 1px solid #444; margin-bottom: 20px;">
         <img src="{char_data['character_image']}" style="width: 130px; margin-right: 25px;">
@@ -131,8 +140,8 @@ with st.sidebar:
         input_meso = st.number_input("순수 메소 (만)", min_value=0, step=100)
         input_frags = st.number_input("조각 (개)", min_value=0, step=1)
         input_gems = st.number_input("코잼 (개)", min_value=0, step=1)
-        f_price = st.number_input("조각 시세(만)", value=500)
-        g_price = st.number_input("코잼 시세(만)", value=200)
+        f_price = st.number_input("조각 시세(만)", value=default_f_price)
+        g_price = st.number_input("코잼 시세(만)", value=default_g_price)
 
         if st.form_submit_button("기록 저장"):
             d_str = input_date.strftime('%Y-%m-%d')
