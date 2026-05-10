@@ -85,7 +85,7 @@ if 'logged_in' not in st.session_state:
 if not st.session_state.logged_in:
     st.title("🍁 이성호 바보 멍충이")
     login_nickname = st.text_input("캐릭터 닉네임")
-    access_password = st.text_input("접속 암호", type="password")
+    access_password = st.text_input("접속 암호")
     if st.button("입장하기"):
         if access_password == "도류도":
             cur.execute("SELECT nickname FROM users WHERE nickname = ?", (login_nickname,))
