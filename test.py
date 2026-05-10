@@ -238,7 +238,7 @@ if not df.empty:
             st.success(f"{delete_date} 기록이 삭제되었습니다.")
             st.rerun()
 
-    # --- 주간별 분석 ---
+    # --- 주간별 상세 분석 (전체 주차 표시 버전) ---
     st.divider()
     st.subheader("📊 주간별 분석")
     sel_m = st.selectbox("월 선택", sorted(df['month'].unique(), reverse=True))
@@ -251,22 +251,48 @@ if not df.empty:
     weeks_data = []
     for w in range(1, total_weeks + 1):
         w_df = m_df[m_df['week_val'] == w]
-        ts, tm, tf, tr = w_df['stuff'].sum(), w_df['meso_man'].sum(), w_df['frags'].sum(), w_df['total_rev'].sum()
-        weeks_data.append(
-            {"주차": f"{w}주차", "총수익": tr, "소재": ts, "평균메소": tm / ts if ts > 0 else 0, "평균조각": tf / ts if ts > 0 else 0})
 
+        # 데이터가 있든 없든 일단 주차별로 변수 초기화
+        ts = w_df['stuff'].sum() if not w_df.empty else 0
+        tr = w_df['total_rev'].sum() if not w_df.empty else 0
+        tf = w_df['frags'].sum() if not w_df.empty else 0
+        tm = w_df['meso_man'].sum() if not w_df.empty else 0
+
+        weeks_data.append({
+            "주차": f"{w}주차",
+            "총수익": tr,
+            "소재": ts,
+            "총조각": tf,
+            "총메소": tm,
+            "평균메소": tm / ts if ts > 0 else 0,
+            "평균조각": tf / ts if ts > 0 else 0
+        })
+
+    # weeks_data는 이제 무조건 1주차부터 마지막 주차까지 다 들어있습니다.
     w_final = pd.DataFrame(weeks_data)
     c1, c2 = st.columns([1.5, 1])
+
     with c1:
         st.bar_chart(w_final.set_index("주차")["총수익"], color="#f1c40f")
+
     with c2:
         for _, row in w_final.iterrows():
-            with st.expander(f"📍 {row['주차']} (총 {int(row['소재'])}재획)"):
+            # 데이터 유무에 따라 라벨링만 다르게 표시
+            label = f"📍 {row['주차']} ({format_korean_currency(row['총수익'])})" if row[
+                                                                                   '소재'] > 0 else f"📍 {row['주차']} (기록 없음)"
+
+            with st.expander(label):
                 if row['소재'] > 0:
+                    st.write(f"**[주간 합계]**")
+                    st.write(f"📅 총 사냥: {int(row['소재'])}소재")
+                    st.write(f"💰 총 메소: {format_korean_currency(row['총메소'])}")
+                    st.write(f"💎 총 조각: {int(row['총조각'])}개")
+                    st.divider()
+                    st.write(f"**[재획당 평균]**")
                     st.write(f"💰 메소: {format_korean_currency(row['평균메소'])}")
                     st.write(f"💎 조각: {row['평균조각']:.1f}개")
                 else:
-                    st.write("데이터 없음")
+                    st.info("이 주차에는 아직 기록된 사냥 데이터가 없습니다.")
 
 else:
     st.info("아직 저장된 사냥 기록이 없습니다. 왼쪽 사이드바에서 첫 기록을 남겨보세요!")
