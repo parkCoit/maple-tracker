@@ -162,7 +162,8 @@ if res.data:
     display_df = df.sort_values(by='date', ascending=False).copy()
     display_df['날짜'] = display_df['date'].dt.strftime('%Y-%m-%d')
     display_df['수익'] = display_df['total_rev'].apply(format_korean_currency)
-    log_table = display_df[['날짜', 'stuff', '수익', 'meso_man', 'frags', 'gems']]
+    display_df['야미'] = display_df['meso_man'].apply(format_korean_currency)
+    log_table = display_df[['날짜', 'stuff', '수익', '야미', 'frags', 'gems']]
     log_table.columns = ['날짜', '소재', '총 수익', '순수 메소', '조각', '코잼']
     st.dataframe(log_table, use_container_width=True, hide_index=True)
 
