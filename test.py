@@ -5,8 +5,13 @@ import requests
 import calendar
 from datetime import datetime, timedelta
 
+st.set_page_config(
+    page_title="사냥띠",
+    page_icon="🍁",
+    layout="wide"
+)
+
 # --- 1. 설정 및 Supabase 연결 ---
-# Streamlit Secrets에 저장된 정보를 불러옵니다.
 URL: str = st.secrets["SUPABASE_URL"]
 KEY: str = st.secrets["SUPABASE_KEY"]
 API_KEY: str = st.secrets["MAPLE_API_KEY"]
