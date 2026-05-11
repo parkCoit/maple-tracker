@@ -1,57 +1,25 @@
 import streamlit as st
 import pandas as pd
-import sqlite3
+from supabase import create_client, Client
 import requests
 import calendar
 from datetime import datetime, timedelta
 
-# --- 1. 설정 및 API 키 ---
-API_KEY = st.secrets["MAPLE_API_KEY"]
+# --- 1. 설정 및 Supabase 연결 ---
+# Streamlit Secrets에 저장된 정보를 불러옵니다.
+URL: str = st.secrets["SUPABASE_URL"]
+KEY: str = st.secrets["SUPABASE_KEY"]
+API_KEY: str = st.secrets["MAPLE_API_KEY"]
+
+# Supabase 클라이언트 초기화
+supabase: Client = create_client(URL, KEY)
 
 # --- 2. 시간 설정 (한국 시간 KST) ---
 KST_TIME = datetime.utcnow() + timedelta(hours=9)
-current_kst = KST_TIME  # 현재 한국 시간
-
-# --- 3. 데이터베이스 설정 ---
-conn = sqlite3.connect('maple_tracker.db', check_same_thread=False)
-cur = conn.cursor()
-cur.execute("CREATE TABLE IF NOT EXISTS users (nickname TEXT PRIMARY KEY)")
-cur.execute("""
-            CREATE TABLE IF NOT EXISTS logs
-            (
-                nickname
-                TEXT,
-                date
-                TEXT,
-                level
-                INTEGER,
-                exp_pct
-                REAL,
-                meso_man
-                INTEGER,
-                frags
-                INTEGER,
-                gems
-                INTEGER,
-                f_price
-                INTEGER,
-                g_price
-                INTEGER,
-                stuff
-                INTEGER
-                DEFAULT
-                0,
-                PRIMARY
-                KEY
-            (
-                nickname,
-                date
-            ))
-            """)
-conn.commit()
+current_kst = KST_TIME
 
 
-# --- 4. 헬퍼 함수 ---
+# --- 3. 헬퍼 함수 ---
 def format_korean_currency(amount_man):
     if amount_man < 10000: return f"{amount_man:,.0f}만"
     eok, man = divmod(amount_man, 10000)
@@ -78,20 +46,18 @@ def get_character_info(nickname):
         return None
 
 
-# --- 5. 로그인 시스템 ---
+# --- 4. 로그인 시스템 ---
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in, st.session_state.current_user = False, ""
 
 if not st.session_state.logged_in:
-    st.title("🍁 이성호 바보 멍충이")
+    st.title("🍁 이성호 바보 멍충이 (Cloud)")
     login_nickname = st.text_input("캐릭터 닉네임")
-    access_password = st.text_input("접속 암호")
+    access_password = st.text_input("접속 암호", type="password")
     if st.button("입장하기"):
         if access_password == "도류도":
-            cur.execute("SELECT nickname FROM users WHERE nickname = ?", (login_nickname,))
-            if not cur.fetchone():
-                cur.execute("INSERT INTO users VALUES (?)", (login_nickname,))
-                conn.commit()
+            # 유저 확인 및 등록 (Supabase)
+            supabase.table("users").upsert({"nickname": login_nickname}).execute()
             st.session_state.logged_in = True
             st.session_state.current_user = login_nickname
             st.rerun()
@@ -129,7 +95,6 @@ with st.sidebar:
     if st.button("로그아웃"): st.session_state.logged_in = False; st.rerun()
     st.divider()
     with st.form("input_form", clear_on_submit=True):
-        # [수정] 날짜 기본값을 한국 시간 기준 오늘로 설정
         input_date = st.date_input("날짜", current_kst.date())
         input_stuff = st.number_input("소재 (재획비)", min_value=0, step=1)
         input_meso = st.number_input("순수 메소 (만)", min_value=0, step=100)
@@ -140,20 +105,32 @@ with st.sidebar:
 
         if st.form_submit_button("기록 저장"):
             d_str = input_date.strftime('%Y-%m-%d')
-            cur.execute("SELECT stuff, meso_man, frags, gems FROM logs WHERE nickname=? AND date=?",
-                        (user_nickname, d_str))
-            r = cur.fetchone()
-            s, m, f, g = (r[0] + input_stuff, r[1] + input_meso, r[2] + input_frags, r[3] + input_gems) if r else (
-                input_stuff, input_meso, input_frags, input_gems)
-            cur.execute("INSERT OR REPLACE INTO logs VALUES (?,?,?,?,?,?,?,?,?,?)",
-                        (user_nickname, d_str, int(char_data['character_level']),
-                         float(char_data['character_exp_rate']), m, f, g, f_price, g_price, s))
-            conn.commit();
+            # 기존 데이터 확인 (합산 로직)
+            res = supabase.table("logs").select("stuff, meso_man, frags, gems").eq("nickname", user_nickname).eq("date",
+                                                                                                                 d_str).execute()
+
+            if res.data:
+                r = res.data[0]
+                s, m, f, g = r['stuff'] + input_stuff, r['meso_man'] + input_meso, r['frags'] + input_frags, r[
+                    'gems'] + input_gems
+            else:
+                s, m, f, g = input_stuff, input_meso, input_frags, input_gems
+
+            # 데이터 저장 (UPSERT)
+            log_entry = {
+                "nickname": user_nickname, "date": d_str, "level": int(char_data['character_level']),
+                "exp_pct": float(char_data['character_exp_rate']), "meso_man": m, "frags": f, "gems": g,
+                "f_price": f_price, "g_price": g_price, "stuff": s
+            }
+            supabase.table("logs").upsert(log_entry).execute()
+            st.success("클라우드에 저장 완료!")
             st.rerun()
 
 # --- 메인 대시보드 ---
-df = pd.read_sql("SELECT * FROM logs WHERE nickname = ?", conn, params=(user_nickname,))
-if not df.empty:
+# 유저 데이터 불러오기
+res = supabase.table("logs").select("*").eq("nickname", user_nickname).execute()
+if res.data:
+    df = pd.DataFrame(res.data)
     df['date'] = pd.to_datetime(df['date'])
     df['total_rev'] = df['meso_man'] + (df['frags'] * df['f_price']) + (df['gems'] * df['g_price'])
     df['month'] = df['date'].dt.strftime('%Y-%m')
@@ -174,7 +151,7 @@ if not df.empty:
     m2.metric(f"이번 주 ({this_w_label}주차)", format_korean_currency(week_v))
     m3.metric("이번 달 총합", format_korean_currency(month_v))
 
-    # 2. 상세 사냥 기록 (위로 올림)
+    # 2. 상세 사냥 기록
     st.divider()
     st.subheader("📝 상세 사냥 기록")
     display_df = df.sort_values(by='date', ascending=False).copy()
@@ -184,7 +161,7 @@ if not df.empty:
     log_table.columns = ['날짜', '소재', '총 수익', '순수 메소', '조각', '코잼']
     st.dataframe(log_table, use_container_width=True, hide_index=True)
 
-    # 3. 주간별 상세 분석 (아래로 내림)
+    # 3. 주간별 상세 분석
     st.divider()
     st.subheader("📊 주간별 분석")
     sel_m = st.selectbox("월 선택", sorted(df['month'].unique(), reverse=True))
@@ -219,9 +196,7 @@ if not df.empty:
                     st.write(f"💰 총 메소: {format_korean_currency(row['총메소'])}")
                     st.write(f"💎 총 조각: {int(row['총조각'])}개")
                     st.divider()
-                    st.write(f"**[재획당 평균]**")
-                    st.write(f"💰 메소: {format_korean_currency(row['평균메소'])}")
-                    st.write(f"💎 조각: {row['평균조각']:.1f}개")
+                    st.write(f"**[평균]** 메소: {format_korean_currency(row['평균메소'])} / 조각: {row['평균조각']:.1f}개")
                 else:
                     st.info("기록이 없습니다.")
 
@@ -229,8 +204,8 @@ if not df.empty:
     with st.expander("🗑️ 기록 삭제하기"):
         delete_date = st.selectbox("날짜 선택", display_df['날짜'].unique())
         if st.button("삭제 실행", type="primary"):
-            cur.execute("DELETE FROM logs WHERE nickname = ? AND date = ?", (user_nickname, delete_date))
-            conn.commit();
+            supabase.table("logs").delete().eq("nickname", user_nickname).eq("date", delete_date).execute()
+            st.success(f"{delete_date} 기록 삭제됨")
             st.rerun()
 else:
-    st.info("아직 저장된 사냥 기록이 없습니다. 왼쪽 사이드바에서 첫 기록을 남겨보세요!")
+    st.info("기록이 없습니다. 사이드바에서 기록을 남겨보세요!")
