@@ -53,7 +53,7 @@ if 'logged_in' not in st.session_state:
 if not st.session_state.logged_in:
     st.title("🍁 이성호 바보 멍충이 (Cloud)")
     login_nickname = st.text_input("캐릭터 닉네임")
-    access_password = st.text_input("접속 암호", type="password")
+    access_password = st.text_input("접속 암호")
     if st.button("입장하기"):
         if access_password == "도류도":
             # 유저 확인 및 등록 (Supabase)
