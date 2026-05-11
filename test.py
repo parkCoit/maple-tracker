@@ -202,7 +202,8 @@ if res.data:
                     st.write(f"💰 총 메소: {format_korean_currency(row['총메소'])}")
                     st.write(f"💎 총 조각: {int(row['총조각'])}개")
                     st.divider()
-                    st.write(f"**[평균]** 메소: {format_korean_currency(row['평균메소'])} / 조각: {row['평균조각']:.1f}개")
+                    st.write(f"💰 평균 메소: {format_korean_currency(row['평균메소'])}")
+                    st.write(f"💎 평균 조각: {row['평균조각']:.1f}개")
                 else:
                     st.info("기록이 없습니다.")
 
