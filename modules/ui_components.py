@@ -242,88 +242,58 @@ import pandas as pd
 import calendar
 from datetime import datetime
 
-import streamlit as st
-import pandas as pd
-import calendar
-from datetime import datetime
-
 
 def render_monthly_calendar(df, target_year, target_month, format_func):
-    # CSS: 화면 너비에 따른 스위칭 및 양 끝 정렬 레이아웃
     st.markdown(f"""
         <style>
+            /* --- 공통 레이아웃 --- */
             .calendar-container {{ 
-                background-color: #111418; 
-                padding: 15px; 
-                border-radius: 15px; 
-                border: 1px solid #2d3139;
+                background-color: #0d1117; 
+                padding: 8px; 
+                border-radius: 10px; 
+                border: 1px solid #30363d;
+                max-width: 900px;
+                margin: 0 auto;
             }}
 
-            .calendar-table {{ 
-                width: 100%; border-collapse: collapse; table-layout: fixed; 
-            }}
+            .calendar-table {{ width: 100%; border-collapse: collapse; table-layout: fixed; }}
 
+            /* --- 데스크탑 달력 스타일 --- */
             .day-cell {{ 
-                height: 200px; border: 1px solid #2d3139; vertical-align: top; padding: 8px; overflow: hidden;
+                height: 115px; border: 1px solid #21262d; vertical-align: top; padding: 4px; overflow: hidden;
             }}
-
-            .day-num {{ font-size: 0.8rem; font-weight: 600; margin-bottom: 6px; }}
-            .sun {{ color: #ff4d4d !important; }}
+            .day-num {{ font-size: 0.7rem; font-weight: 500; margin-bottom: 2px; color: #7d8590; }}
+            .sun {{ color: #f85149 !important; }}
             .sat {{ color: #58a6ff !important; }}
 
-            /* 등급 문구 스타일 */
-            .grade-text {{
-                font-size: 0.65rem;
-                font-weight: 800;
-                margin-bottom: 5px;
-                padding: 2px 4px;
-                border-radius: 4px;
-                text-align: center;
+            .grade-dot {{
+                font-size: 0.55rem; font-weight: 700; margin-bottom: 3px; display: inline-block;
+                padding: 0px 4px; border-radius: 10px;
             }}
 
-            /* 데이터 박스 구성 */
-            .stat-box {{ 
-                border-radius: 6px; padding: 6px; font-size: 0.7rem; line-height: 1.4;
-                display: flex; flex-direction: column; gap: 4px; height: calc(100% - 45px);
-            }}
-
-            .card-rare {{ border-left: 3px solid #3196ff; background: rgba(49, 150, 255, 0.08); }}
-            .card-epic {{ border-left: 3px solid #9155fb; background: rgba(145, 85, 251, 0.08); }}
-            .card-unique {{ border-left: 3px solid #ffb100; background: rgba(255, 177, 0, 0.08); }}
-            .card-legendary {{ border-left: 3px solid #28e228; background: rgba(40, 226, 40, 0.08); }}
-
-            .stat-row {{ 
-                display: flex; 
-                justify-content: space-between; 
-                align-items: center;
-            }}
-            .label-group {{
-                display: flex;
-                align-items: center;
-                gap: 4px;
-            }}
-            .label-text {{ color: #848d97; font-size: 0.65rem; }}
-            .val-text {{ font-weight: bold; color: #ffffff; text-align: right; }}
-            .val-meso {{ color: #f1c40f; font-weight: bold; text-align: right; }}
+            .stat-box {{ display: flex; flex-direction: column; gap: 1px; }}
+            .stat-row {{ display: flex; justify-content: space-between; align-items: center; line-height: 1.2; }}
+            .label-text {{ color: #7d8590; font-size: 0.6rem; }}
+            .val-text {{ font-weight: 500; color: #c9d1d9; font-size: 0.62rem; }}
+            .val-meso {{ color: #e3b341; font-weight: 600; font-size: 0.62rem; }}
 
             .val-net-group {{ 
-                margin-top: auto; 
-                padding-top: 5px; 
-                border-top: 1px dashed rgba(255,255,255,0.2);
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
+                margin-top: 4px; padding-top: 3px; border-top: 1px solid #30363d; text-align: right;
             }}
-            .val-net {{ color: #ffffff; font-weight: 800; font-size: 0.75rem; text-align: right; }}
+            .val-net {{ color: #f0f6fc; font-weight: 700; font-size: 0.65rem; }}
 
-            /* 모바일용 스타일 */
+            /* --- 모바일 리스트 스타일 --- */
             .mobile-list-container {{ display: none; width: 100%; }}
             .mobile-card {{
-                background: #1c1f26; border-radius: 10px; padding: 12px; margin-bottom: 10px;
-                border-left: 5px solid #2d3139; display: flex; justify-content: space-between; align-items: center;
+                background: #0d1117; border-radius: 8px; padding: 10px; margin-bottom: 6px;
+                border: 1px solid #30363d; display: flex; justify-content: space-between; align-items: center;
             }}
-            .m-date {{ font-size: 0.9rem; font-weight: bold; color: #848d97; }}
+            .m-date {{ font-size: 0.85rem; font-weight: bold; color: #c9d1d9; }}
+            .m-grade {{ font-size: 0.65rem; font-weight: 800; }}
+            .m-net {{ color: #f0f6fc; font-weight: bold; font-size: 0.95rem; }}
+            .m-sub {{ color: #7d8590; font-size: 0.7rem; }}
 
+            /* --- 반응형 스위칭 (700px 기준) --- */
             @media (max-width: 700px) {{
                 .calendar-container {{ display: none !important; }}
                 .mobile-list-container {{ display: block !important; }}
@@ -331,26 +301,22 @@ def render_monthly_calendar(df, target_year, target_month, format_func):
         </style>
     """, unsafe_allow_html=True)
 
-    st.subheader(f"📅 {target_year}년 {target_month}월 현황")
-
-    # 등급별 문구 및 설정 로직
     def get_grade_info(meso):
-        if meso >= 75000:
-            return "card-legendary", "#28e228", "메제 드가자~"
-        if meso >= 50000:
-            return "card-unique", "#ffb100", "도류도급"
-        if meso >= 25000:
-            return "card-epic", "#9155fb", "빵미농급"
-        return "card-rare", "#3196ff", "일안하노 ㅋㅋ"
+        if meso >= 75000: return "#3fb950", "메제 나이쨔!"  # 초록
+        if meso >= 50000: return "#d29922", "도류도급 에바야~"  # 노랑
+        if meso >= 25000: return "#8b949e", "빵미농급 기모띠~"  # 회색
+        return "#484f58", "일안하냐?"
+
+    st.subheader(f"📅 {target_year}년 {target_month}월 현황")
 
     cal = calendar.Calendar(firstweekday=6)
     month_days = cal.monthdayscalendar(target_year, target_month)
 
-    # --- 1. 달력 HTML 생성 (데스크탑용) ---
+    # --- 1. 데스크탑 달력 렌더링 ---
     html_cal = '<div class="calendar-container"><table class="calendar-table"><tr>'
     for i, day_name in enumerate(['일', '월', '화', '수', '목', '금', '토']):
         cls = 'sun' if i == 0 else ('sat' if i == 6 else '')
-        html_cal += f'<th style="color:#848d97; padding:10px; font-size:0.8rem;" class="{cls}">{day_name}</th>'
+        html_cal += f'<th style="color:#7d8590; padding:4px; font-size:0.7rem; font-weight:normal;" class="{cls}">{day_name}</th>'
     html_cal += '</tr>'
 
     for week in month_days:
@@ -369,55 +335,41 @@ def render_monthly_calendar(df, target_year, target_month, format_func):
                     total_frags = int(day_data['frags'].sum())
                     total_stuff = int(day_data['stuff'].sum())
                     net_revenue = day_data['total_rev'].sum()
-
-                    # 등급 정보 가져오기
-                    grade_cls, grade_color, grade_msg = get_grade_info(total_meso)
+                    g_color, g_msg = get_grade_info(total_meso)
 
                     html_cal += f'''
-                        <div class="grade-text" style="background: {grade_color}22; color: {grade_color};">
-                            {grade_msg}
-                        </div>
-                        <div class="stat-box {grade_cls}">
+                        <div class="grade-dot" style="background: {g_color}22; color: {g_color}; border: 1px solid {g_color}44;">{g_msg}</div>
+                        <div class="stat-box">
                             <div class="stat-row">
-                                <div class="label-group"><span>🎮</span><span class="label-text">사냥</span></div>
-                                <span class="val-text">{total_stuff}회</span>
+                                <span class="label-text">🎮 {total_stuff}</span>
+                                <span class="val-text">💎 {total_frags}</span>
                             </div>
-                            <div class="stat-row">
-                                <div class="label-group"><span>💎</span><span class="label-text">조각</span></div>
-                                <span class="val-text">{total_frags}개</span>
-                            </div>
-                            <div class="stat-row">
-                                <div class="label-group"><span>💰</span><span class="label-text">메소</span></div>
-                                <span class="val-meso">{format_func(total_meso)}</span>
-                            </div>
-                            <div class="val-net-group">
-                                <span class="label-text" style="color:#ffffff;">✨ 순수익</span>
-                                <span class="val-net">{format_func(net_revenue)}</span>
-                            </div>
+                            <div class="stat-row"><span class="label-text">💰</span><span class="val-meso">{format_func(total_meso)}</span></div>
+                            <div class="val-net-group"><span class="val-net">✨ {format_func(net_revenue)}</span></div>
                         </div>'''
                 html_cal += '</td>'
         html_cal += '</tr>'
     html_cal += '</table></div>'
 
-    # --- 2. 리스트 HTML 생성 (모바일용) ---
+    # --- 2. 모바일 리스트 렌더링 ---
     html_list = '<div class="mobile-list-container">'
     month_data = df[(df['date'].dt.year == target_year) & (df['date'].dt.month == target_month)].sort_values('date',
                                                                                                              ascending=False)
 
     if month_data.empty:
-        html_list += '<div style="color:#848d97; text-align:center; padding:20px;">사냥 기록이 없습니다.</div>'
+        html_list += '<div style="color:#7d8590; text-align:center; padding:20px; font-size:0.8rem;">사냥 기록이 없습니다.</div>'
     else:
         for _, row in month_data.iterrows():
-            _, g_color, g_msg = get_grade_info(row['meso_man'])
+            g_color, g_msg = get_grade_info(row['meso_man'])
             html_list += f'''
-                <div class="mobile-card" style="border-left-color: {g_color};">
+                <div class="mobile-card" style="border-left: 3px solid {g_color};">
                     <div>
                         <div class="m-date">{row['date'].strftime('%m.%d')} ({row['day_name'][0]})</div>
-                        <div style="color:{g_color}; font-size:0.65rem; font-weight:bold;">{g_msg}</div>
+                        <div class="m-grade" style="color:{g_color};">{g_msg}</div>
                     </div>
                     <div style="text-align:right;">
-                        <div style="color:#ffffff; font-weight:bold; font-size:1rem;">{format_func(row['total_rev'])}</div>
-                        <div style="color:#848d97; font-size:0.75rem;">🎮 {int(row['stuff'])}회 | 💎 {int(row['frags'])}개</div>
+                        <div class="m-net">✨ {format_func(row['total_rev'])}</div>
+                        <div class="m-sub">🎮 {int(row['stuff'])}회 | 💎 {int(row['frags'])}개</div>
                     </div>
                 </div>'''
     html_list += '</div>'
