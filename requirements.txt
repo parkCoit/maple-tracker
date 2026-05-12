@@ -2,4 +2,4 @@ streamlit
 pandas
 requests
 supabase
-extra-streamlit-components
+streamlit_javascript

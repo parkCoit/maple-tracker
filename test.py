@@ -4,7 +4,7 @@ from supabase import create_client, Client
 import requests
 import calendar
 from datetime import datetime, timedelta
-import extra_streamlit_components as stx
+from streamlit_javascript import st_javascript
 
 st.set_page_config(
     page_title="사냥띠",
@@ -12,12 +12,6 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- 0. 쿠키 매니저 초기화 ---
-# 매번 함수를 호출하지 않고 세션 상태에 저장해두면 더 안정적입니다.
-if 'cookie_manager' not in st.session_state:
-    st.session_state.cookie_manager = stx.CookieManager(key="m_cook")
-
-cookie_manager = st.session_state.cookie_manager
 
 # --- 1. 설정 및 Supabase 연결 ---
 URL: str = st.secrets["SUPABASE_URL"]
@@ -63,43 +57,36 @@ def get_character_info(nickname):
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in, st.session_state.current_user = False, ""
 
-# 쿠키를 읽어오는데 약간의 지연이 있을 수 있으므로 체크
-saved_user = cookie_manager.get(cookie="maple_user")
+# --- [핵심] 브라우저 로컬 스토리지에서 정보 가져오기 ---
+# 'maple_user_token'이라는 이름으로 저장된 값을 읽어옵니다.
+stored_nickname = st_javascript("localStorage.getItem('maple_user_token');")
 
-# [보강] 세션에는 없지만 쿠키에는 데이터가 있는 경우
-if not st.session_state.logged_in:
-    if saved_user:
+# 세션은 끊겼지만 브라우저가 닉네임을 기억하고 있다면 자동 로그인 실행
+if not st.session_state.logged_in and stored_nickname:
+    if isinstance(stored_nickname, str) and stored_nickname != "null":
         st.session_state.logged_in = True
-        st.session_state.current_user = saved_user
-        st.rerun() # 쿠키를 찾자마자 바로 화면을 갱신해서 로그인 처리
+        st.session_state.current_user = stored_nickname
+        st.rerun()
 
 if not st.session_state.logged_in:
     st.title("🍁 이성호 바보 멍충이")
+
     login_nickname = st.text_input("캐릭터 닉네임")
     access_password = st.text_input("접속 암호")
 
-    # "자동 로그인" 체크박스 추가
-    remember_me = st.checkbox("자동 로그인 유지", value=True) # 기본값 체크
+    auto_login = st.checkbox("이 컴퓨터에서 자동 로그인 유지", value=True)
+
 
     if st.button("입장하기"):
         if access_password == "도류도":
-            # 유저 확인 및 등록 (Supabase)
-            supabase.table("users").upsert({"nickname": login_nickname}).execute()
-
             st.session_state.logged_in = True
             st.session_state.current_user = login_nickname
 
-            # 자동 로그인을 체크했다면 쿠키 저장
-            if remember_me:
-                # expires_at을 충분히 길게(30일) 설정
-                cookie_manager.set(
-                    "maple_user",
-                    login_nickname,
-                    expires_at=datetime.now() + timedelta(days=365),
-                    key="set_cook"
-                )
+            # [핵심] 체크박스를 눌렀다면 브라우저에 닉네임 저장
+            if auto_login:
+                st_javascript(f"localStorage.setItem('maple_user_token', '{login_nickname}');")
 
-            st.success(f"{login_nickname}님 환영합니다!")
+            st.success(f"{login_nickname}님, 반가워요!")
             st.rerun()
         else:
             st.error("암호가 올바르지 않습니다.")
@@ -133,8 +120,8 @@ if char_data:
 with st.sidebar:
     st.header(f"✨ {user_nickname}님")
     if st.button("로그아웃"):
-        # 로그아웃 시 쿠키 삭제
-        cookie_manager.delete("maple_user")
+        # 로그아웃을 누르면 브라우저에 저장된 자동 로그인 정보도 지웁니다.
+        st_javascript("localStorage.removeItem('maple_user_token');")
         st.session_state.logged_in = False
         st.session_state.current_user = ""
         st.rerun()
