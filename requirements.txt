@@ -1,5 +1,6 @@
 streamlit
-pandas
 requests
 supabase
 streamlit_javascript
+pandas
+plotly
