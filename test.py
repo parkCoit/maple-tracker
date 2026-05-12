@@ -145,19 +145,16 @@ if char_data:
         default_f_price, default_g_price = 600, 10
     elif world == "크로아":
         default_f_price, default_g_price = 700, 10
-    st.markdown(f"""
-        <div class="char-card">
-            <img src="{char_data['character_image']}" style="width: 120px; margin-right: 25px;">
-            <div style="width: 100%;">
-                <h2 style="margin: 0; color: #f1c40f;">{char_data['character_name']} <span style="font-size: 14px; color: #aaa;">({world})</span></h2>
-                <p style="margin: 5px 0; font-size: 16px;">Lv. {char_data['character_level']} | {char_data['character_class']}</p>
-                <div style="width: 100%; background: #3d3d3d; border-radius: 10px; height: 10px; margin-top: 10px;">
-                    <div style="width: {char_data['character_exp_rate']}%; background: #00d2ff; height: 100%; border-radius: 10px;"></div>
-                </div>
-                <p style="text-align: right; font-size: 11px; margin-top: 5px; color: #888;">EXP: {char_data['character_exp_rate']}%</p>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+    c_img = char_data['character_image']
+    c_name = char_data['character_name']
+    c_lv = char_data['character_level']
+    c_class = char_data['character_class']
+    c_exp = char_data['character_exp_rate']
+    world = char_data['world_name']
+
+    html_code = f'<div style="display:flex;justify-content:center;margin-bottom:30px;width:100%;"><div style="width:95%;max-width:800px;background:linear-gradient(135deg,#16171b 0%,#0b0c0f 100%);border-radius:28px;border:2px solid #3c3d42;padding:30px 40px;box-shadow:0 20px 50px rgba(0,0,0,0.7);display:flex;flex-wrap:nowrap;align-items:center;gap:40px;position:relative;overflow:hidden;"><div style="flex-shrink:0;position:relative;z-index:2;"><div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:200px;height:200px;background:radial-gradient(circle,rgba(241,196,15,0.1) 0%,transparent 70%);z-index:-1;"></div><img src="{c_img}" style="width:160px;filter:drop-shadow(0:15px:25px:rgba(0,0,0,0.9));display:block;"></div><div style="flex:1;z-index:2;min-width:0;"><div style="margin-bottom:20px;"><h1 style="margin:0;color:#f1c40f;font-size:36px;font-weight:900;letter-spacing:-1.5px;text-shadow:0 4px 8px rgba(0,0,0,0.8);line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{c_name}</h1><div style="margin-top:10px;display:flex;align-items:center;gap:12px;color:#d1d1d1;white-space:nowrap;"><span style="font-size:16px;font-weight:700;background:rgba(255,255,255,0.05);padding:2px:12px;border-radius:6px;">{world}</span><span style="font-size:15px;color:#888;">Lv.{c_lv}</span><span style="color:#444;">|</span><span style="font-size:15px;color:#888;">{c_class}</span></div></div><div style="margin-top:25px;"><div style="display:flex;justify-content:space-between;margin-bottom:8px;align-items:flex-end;"><span style="font-size:12px;color:#555;font-weight:900;letter-spacing:2px;">EXP PROGRESS</span><span style="font-size:16px;color:#f1c40f;font-weight:900;font-family:monospace;">{c_exp}%</span></div><div style="width:100%;background:#000;border-radius:20px;height:10px;overflow:hidden;border:1px solid #2d2e34;padding:2px;"><div style="width:{c_exp}%;background:linear-gradient(90deg,#8e8e93 0%,#f1c40f 100%);height:100%;border-radius:20px;box-shadow:0 0 15px rgba(241,196,15,0.5);"></div></div></div></div></div></div>'
+
+    st.markdown(html_code, unsafe_allow_html=True)
 
 # --- 사이드바 ---
 with st.sidebar:
