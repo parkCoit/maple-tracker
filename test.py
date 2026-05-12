@@ -274,15 +274,15 @@ if res.data:
 
                         # 등급 판정 로직
                         if d_sum >= 100000:
-                            acc, gnt = "#c5ff00", "LEGENDARY"
+                            acc, gnt = "#c5ff00", "메제노 ㅋ"
                         elif d_sum >= 75000:
-                            acc, gnt = "#ffc600", "UNIQUE"
+                            acc, gnt = "#ffc600", "좀하네 ㅋ"
                         elif d_sum >= 50000:
-                            acc, gnt = "#a55eea", "EPIC"
+                            acc, gnt = "#a55eea", "도류도급"
                         elif d_sum >= 25000:
-                            acc, gnt = "#3498db", "RARE"
+                            acc, gnt = "#3498db", "빵미농급"
                         else:
-                            acc, gnt = "#7f8c8d", "NORMAL"
+                            acc, gnt = "#7f8c8d", "왜안함 ?"
 
                         # 금액 포맷팅 (함수 호출)
                         m_str = format_korean_currency(p_meso)
