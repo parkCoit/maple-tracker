@@ -296,9 +296,9 @@ def render_monthly_calendar(df, target_year, target_month, format_func):
     """, unsafe_allow_html=True)
 
     def get_grade_info(meso):
-        if meso >= 75000: return "#3fb950", "메제 나이쨔!"  # 초록
-        if meso >= 50000: return "#d29922", "도류도급 에바야~"  # 노랑
-        if meso >= 25000: return "#8b949e", "빵미농급 기모띠~"  # 회색
+        if meso >= 50000: return "#3fb950", "메제 나이쨔!"  # 초록
+        if meso >= 30000: return "#d29922", "도류도급 에바야~"  # 노랑
+        if meso >= 15000: return "#8b949e", "빵미농급 기모띠~"  # 회색
         return "#484f58", "일안하냐?"
 
     st.subheader(f"📅 {target_year}년 {target_month}월 현황")
