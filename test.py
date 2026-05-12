@@ -4,12 +4,20 @@ from supabase import create_client, Client
 import requests
 import calendar
 from datetime import datetime, timedelta
+import extra_streamlit_components as stx
 
 st.set_page_config(
     page_title="사냥띠",
     page_icon="🍁",
     layout="wide"
 )
+
+# --- 0. 쿠키 매니저 초기화 ---
+# 매번 함수를 호출하지 않고 세션 상태에 저장해두면 더 안정적입니다.
+if 'cookie_manager' not in st.session_state:
+    st.session_state.cookie_manager = stx.CookieManager(key="m_cook")
+
+cookie_manager = st.session_state.cookie_manager
 
 # --- 1. 설정 및 Supabase 연결 ---
 URL: str = st.secrets["SUPABASE_URL"]
@@ -55,16 +63,43 @@ def get_character_info(nickname):
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in, st.session_state.current_user = False, ""
 
+# 쿠키를 읽어오는데 약간의 지연이 있을 수 있으므로 체크
+saved_user = cookie_manager.get(cookie="maple_user")
+
+# [보강] 세션에는 없지만 쿠키에는 데이터가 있는 경우
+if not st.session_state.logged_in:
+    if saved_user:
+        st.session_state.logged_in = True
+        st.session_state.current_user = saved_user
+        st.rerun() # 쿠키를 찾자마자 바로 화면을 갱신해서 로그인 처리
+
 if not st.session_state.logged_in:
     st.title("🍁 이성호 바보 멍충이")
     login_nickname = st.text_input("캐릭터 닉네임")
     access_password = st.text_input("접속 암호")
+
+    # "자동 로그인" 체크박스 추가
+    remember_me = st.checkbox("자동 로그인 유지", value=True) # 기본값 체크
+
     if st.button("입장하기"):
         if access_password == "도류도":
             # 유저 확인 및 등록 (Supabase)
             supabase.table("users").upsert({"nickname": login_nickname}).execute()
+
             st.session_state.logged_in = True
             st.session_state.current_user = login_nickname
+
+            # 자동 로그인을 체크했다면 쿠키 저장
+            if remember_me:
+                # expires_at을 충분히 길게(30일) 설정
+                cookie_manager.set(
+                    "maple_user",
+                    login_nickname,
+                    expires_at=datetime.now() + timedelta(days=365),
+                    key="set_cook"
+                )
+
+            st.success(f"{login_nickname}님 환영합니다!")
             st.rerun()
         else:
             st.error("암호가 올바르지 않습니다.")
@@ -97,8 +132,12 @@ if char_data:
 # --- 사이드바 ---
 with st.sidebar:
     st.header(f"✨ {user_nickname}님")
-    if st.button("로그아웃"): st.session_state.logged_in = False; st.rerun()
-    st.divider()
+    if st.button("로그아웃"):
+        # 로그아웃 시 쿠키 삭제
+        cookie_manager.delete("maple_user")
+        st.session_state.logged_in = False
+        st.session_state.current_user = ""
+        st.rerun()
     with st.form("input_form", clear_on_submit=True):
         input_date = st.date_input("날짜", current_kst.date())
         input_stuff = st.number_input("소재 (재획비)", min_value=0, step=1)
