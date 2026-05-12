@@ -267,7 +267,7 @@ def render_monthly_calendar(df, target_year, target_month, format_func):
 
             .stat-box {{ display: flex; flex-direction: column; gap: 1px; }}
             .stat-row {{ display: flex; justify-content: space-between; align-items: center; line-height: 1.2; }}
-            .label-text {{ color: #7d8590; font-size: 0.6rem; }}
+            .label-text {{ color: #7d8590; font-size: 0.62rem; }}
             .val-text {{ font-weight: 500; color: #c9d1d9; font-size: 0.62rem; }}
             .val-meso {{ color: #e3b341; font-weight: 600; font-size: 0.62rem; }}
 
@@ -335,7 +335,7 @@ def render_monthly_calendar(df, target_year, target_month, format_func):
                         <div class="grade-dot" style="background: {g_color}22; color: {g_color}; border: 1px solid {g_color}44;">{g_msg}</div>
                         <div class="stat-box">
                             <div class="stat-row">
-                                <span class="label-text">🎮 {total_stuff}</span>
+                                <span class="label-text">🎮 {total_stuff}소재</span>
                                 <span class="val-text">💎 {total_frags}</span>
                             </div>
                             <div class="stat-row"><span class="label-text">💰</span><span class="val-meso">{format_func(total_meso)}</span></div>
