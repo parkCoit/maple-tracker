@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from streamlit_javascript import st_javascript
 
 st.set_page_config(
-    page_title="사냥띠",
+    page_title="사냥",
     page_icon="🍁",
     layout="wide"
 )
