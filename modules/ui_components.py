@@ -237,12 +237,6 @@ def render_revenue_metrics(today_v, week_v, month_v, week_num, format_func):
     m3.metric("이번 달", format_func(month_v))
 
 
-import streamlit as st
-import pandas as pd
-import calendar
-from datetime import datetime
-
-
 def render_monthly_calendar(df, target_year, target_month, format_func):
     st.markdown(f"""
         <style>
