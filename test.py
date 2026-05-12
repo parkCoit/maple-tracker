@@ -1,4 +1,5 @@
 import streamlit as st
+import time
 import pandas as pd
 from supabase import create_client, Client
 import requests
@@ -57,18 +58,20 @@ def get_character_info(nickname):
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in, st.session_state.current_user = False, ""
 
-# --- [핵심] 브라우저 로컬 스토리지에서 정보 가져오기 ---
-# 'maple_user_token'이라는 이름으로 저장된 값을 읽어옵니다.
+if 'logout_in_progress' not in st.session_state:
+    st.session_state.logout_in_progress = False
+
 stored_nickname = st_javascript("localStorage.getItem('maple_user_token');")
 
-# 세션은 끊겼지만 브라우저가 닉네임을 기억하고 있다면 자동 로그인 실행
-if not st.session_state.logged_in and stored_nickname:
-    if isinstance(stored_nickname, str) and stored_nickname != "null":
+
+if not st.session_state.logged_in and not st.session_state.logout_in_progress:
+    if stored_nickname and stored_nickname not in ["null", "undefined", ""]:
         st.session_state.logged_in = True
         st.session_state.current_user = stored_nickname
         st.rerun()
 
 if not st.session_state.logged_in:
+    st.session_state.logout_in_progress = False
     st.title("🍁 이성호 바보 멍충이")
 
     login_nickname = st.text_input("캐릭터 닉네임")
@@ -82,9 +85,11 @@ if not st.session_state.logged_in:
             st.session_state.logged_in = True
             st.session_state.current_user = login_nickname
 
-            # [핵심] 체크박스를 눌렀다면 브라우저에 닉네임 저장
             if auto_login:
+                # 1. 로컬 스토리지에 저장 (반드시 소문자 localStorage 확인!)
                 st_javascript(f"localStorage.setItem('maple_user_token', '{login_nickname}');")
+                # 2. 자바스크립트가 브라우저에 도달할 시간을 아주 잠깐(0.1초) 줍니다.
+                time.sleep(0.1)
 
             st.success(f"{login_nickname}님, 반가워요!")
             st.rerun()
@@ -120,10 +125,24 @@ if char_data:
 with st.sidebar:
     st.header(f"✨ {user_nickname}님")
     if st.button("로그아웃"):
-        # 로그아웃을 누르면 브라우저에 저장된 자동 로그인 정보도 지웁니다.
-        st_javascript("localStorage.removeItem('maple_user_token');")
+        # 1. 화면의 기존 내용을 싹 비웁니다.
+        placeholder = st.empty()
+
+        with placeholder.container():
+            st.warning("로그아웃 중입니다... 잠시만 기다려주세요.")
+            # 2. 여기서 자바스크립트를 실행 (화면에 그려져야 실행됨)
+            st_javascript("localStorage.removeItem('maple_user_token');")
+
+        # 3. 자바스크립트가 브라우저 저장소를 비울 시간을 충분히 줍니다.
+        # 0.1초는 너무 짧을 수 있으니 0.5초 정도로 넉넉히 줍니다.
+        time.sleep(0.5)
+
+        # 4. 세션 상태 초기화
         st.session_state.logged_in = False
         st.session_state.current_user = ""
+        st.session_state.logout_in_progress = True  # 아까 만든 플래그 유지
+
+        # 5. 이제 새로고침
         st.rerun()
     with st.form("input_form", clear_on_submit=True):
         input_date = st.date_input("날짜", current_kst.date())
@@ -167,7 +186,7 @@ if res.data:
     df['month'] = df['date'].dt.strftime('%Y-%m')
     df['week_val'] = df['date'].apply(get_week_of_month)
 
-    # 1. 상단 요약 카드
+    # 상단 요약 카드
     st.subheader("💰 수익 현황")
     m1, m2, m3 = st.columns(3)
     today_str = current_kst.strftime('%Y-%m-%d')
@@ -182,18 +201,65 @@ if res.data:
     m2.metric(f"이번 주 ({this_w_label}주차)", format_korean_currency(week_v))
     m3.metric("이번 달 총합", format_korean_currency(month_v))
 
-    # 2. 상세 사냥 기록
     st.divider()
-    st.subheader("📝 상세 사냥 기록")
-    display_df = df.sort_values(by='date', ascending=False).copy()
-    display_df['날짜'] = display_df['date'].dt.strftime('%Y-%m-%d')
-    display_df['수익'] = display_df['total_rev'].apply(format_korean_currency)
-    display_df['야미'] = display_df['meso_man'].apply(format_korean_currency)
-    log_table = display_df[['날짜', 'stuff', '수익', '야미', 'frags', 'gems']]
-    log_table.columns = ['날짜', '소재', '총 수익', '순수 메소', '조각', '코잼']
-    st.dataframe(log_table, use_container_width=True, hide_index=True)
 
-    # 3. 주간별 상세 분석
+
+    # 달력
+    if not df.empty:
+
+        st.subheader("🗓️ 월간 사냥 출석부")
+        all_months = df['date'].dt.strftime('%Y-%m').unique()
+        sel_m = st.selectbox("📅 조회할 달을 선택하세요", all_months, index=len(all_months) - 1)
+
+        year, month_num = map(int, sel_m.split('-'))
+        cal = calendar.monthcalendar(year, month_num)
+        days = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
+
+        # [요일 헤더 및 달력 그리기 로직 시작]
+        cols = st.columns(7)
+        for i, d in enumerate(days):
+            cols[i].markdown(
+                f"<div style='text-align: center; color: #888; font-size: 11px; font-weight: bold; margin-bottom: 10px;'>{d}</div>",
+                unsafe_allow_html=True)
+
+        display_df = df.sort_values(by='date', ascending=False).copy()
+
+        for week in cal:
+            cols = st.columns(7)
+            for i, day in enumerate(week):
+                if day == 0:
+                    cols[i].write("")
+                else:
+                    date_str = f"{year}-{month_num:02d}-{day:02d}"
+
+                    target_row = display_df[display_df['date'].dt.strftime('%Y-%m-%d') == date_str]
+
+                    if not target_row.empty:
+
+                        pure_meso = target_row['meso_man'].iloc[0]
+                        total_frags = target_row['frags'].iloc[0]
+
+                        day_total_sum = target_row['total_rev'].iloc[0]
+
+                        # 메이플 등급 색상 판정 (2.5억 단위)
+                        if day_total_sum >= 100000:
+                            accent_color, grade_name = "#c5ff00", "LEGENDARY"
+                        elif day_total_sum >= 75000:
+                            accent_color, grade_name = "#ffc600", "UNIQUE"
+                        elif day_total_sum >= 50000:
+                            accent_color, grade_name = "#a55eea", "EPIC"
+                        elif day_total_sum >= 25000:
+                            accent_color, grade_name = "#3498db", "RARE"
+                        else:
+                            accent_color = "#7f8c8d"; grade_name = "NORMAL"
+
+                        html_content = f"""<div style="background:linear-gradient(135deg, rgba(35,35,40,0.95), rgba(25,25,30,0.95));border:1px solid {accent_color}55;border-left:4px solid {accent_color};border-radius:6px;padding:8px 4px;height:130px;width:100%;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden;box-shadow:0 4px 10px rgba(0,0,0,0.4);"><div style="position:absolute;top:5px;right:8px;font-size:0.65rem;color:#777;font-weight:bold;">{day}</div><div style="margin-top:15px;flex-grow:1;display:flex;flex-direction:column;justify-content:center;gap:3px;"><div style="font-size:0.75rem;color:#ddd;display:flex;align-items:center;justify-content:center;"><span style="margin-right:4px;">💰</span>{format_korean_currency(pure_meso)}</div><div style="font-size:0.75rem;color:#00d2ff;display:flex;align-items:center;justify-content:center;"><span style="margin-right:4px;">💎</span>{int(total_frags)} EA</div></div><div style="background:rgba(0,0,0,0.4);border-radius:4px;padding:4px 0;margin-top:4px;"><div style="font-size:0.55rem;color:{accent_color};font-weight:bold;letter-spacing:1px;text-align:center;">{grade_name}</div><div style="font-size:0.85rem;color:#fff;font-weight:900;text-align:center;text-shadow:0 0 5px {accent_color}aa;">{format_korean_currency(day_total_sum)}</div></div></div>"""
+                        cols[i].markdown(html_content, unsafe_allow_html=True)
+                    else:
+                        html_empty = f"""<div style="background:rgba(255,255,255,0.02);border:1px dashed rgba(255,255,255,0.1);border-radius:6px;height:130px;width:100%;box-sizing:border-box;position:relative;display:flex;align-items:center;justify-content:center;"><div style="position:absolute;top:5px;right:8px;font-size:0.6rem;color:#444;">{day}</div><div style="font-size:0.8rem;color:#222;font-weight:bold;">EMPTY</div></div>"""
+                        cols[i].markdown(html_empty, unsafe_allow_html=True)
+
+    # 주간별 상세 분석
     st.divider()
     st.subheader("📊 주간별 분석")
     sel_m = st.selectbox("월 선택", sorted(df['month'].unique(), reverse=True))
@@ -232,6 +298,18 @@ if res.data:
                     st.write(f"💎 평균 조각: {row['평균조각']:.1f}개")
                 else:
                     st.info("기록이 없습니다.")
+
+    # 상세 사냥 기록
+    st.divider()
+    st.subheader("📝 상세 사냥 기록")
+    display_df = df.sort_values(by='date', ascending=False).copy()
+    display_df['날짜'] = display_df['date'].dt.strftime('%Y-%m-%d')
+    display_df['수익'] = display_df['total_rev'].apply(format_korean_currency)
+    display_df['야미'] = display_df['meso_man'].apply(format_korean_currency)
+    log_table = display_df[['날짜', 'stuff', '수익', '야미', 'frags', 'gems']]
+    log_table.columns = ['날짜', '소재', '총 수익', '순수 메소', '조각', '코잼']
+    st.dataframe(log_table, use_container_width=True, hide_index=True)
+
 
     # 삭제 기능
     with st.expander("🗑️ 기록 삭제하기"):
