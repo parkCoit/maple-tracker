@@ -161,8 +161,8 @@ if res:
             "소재": ts,
             "총조각": tf,
             "총메소": tm,
-            "평균메소": avg_m,  # 이 키가 있어야 KeyError가 발생하지 않습니다.
-            "평균조각": avg_f  # 이 키가 있어야 KeyError가 발생하지 않습니다.
+            "평균메소": avg_m,
+            "평균조각": avg_f
         })
 
     ui.render_weekly_analysis(df, pd.DataFrame(weeks_data), format_korean_currency)
