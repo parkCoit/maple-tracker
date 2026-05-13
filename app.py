@@ -22,7 +22,7 @@ if not st.session_state.logged_in and not st.session_state.logout_refreshed:
     if stored_nickname and str(stored_nickname) not in ["null", "undefined", "0", "None", "", None]:
         st.session_state.logged_in = True
         st.session_state.current_user = str(stored_nickname)
-        st.switch_page("farming.py")
+        st.switch_page("pages/farming.py")
 
 # 4. 로그인 화면
 if not st.session_state.logged_in:
@@ -40,7 +40,7 @@ if not st.session_state.logged_in:
                 st_javascript(f"localStorage.setItem('maple_user_token', '{login_nickname}');")
             st.success("로그인 성공!")
             time.sleep(0.5)
-            st.switch_page("farming.py")
+            st.switch_page("pages/farming.py")
         else:
             st.error("암호가 올바르지 않습니다.")
     st.stop()
