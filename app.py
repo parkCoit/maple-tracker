@@ -28,7 +28,7 @@ if not st.session_state.logged_in and not st.session_state.logout_refreshed:
 if not st.session_state.logged_in:
     st.title("🍁 주5일 4소재 기릿")
     login_nickname = st.text_input("캐릭터 닉네임")
-    access_password = st.text_input("접속 암호", type="password")
+    access_password = st.text_input("접속 암호")
     auto_login_check = st.checkbox("자동 로그인 유지", value=True)
 
     if st.button("입장하기"):
