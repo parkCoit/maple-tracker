@@ -354,7 +354,7 @@ def render_monthly_calendar(df, target_year, target_month, format_func):
         html_list += '<div style="color:#7d8590; text-align:center; padding:20px; font-size:0.8rem;">사냥 기록이 없습니다.</div>'
     else:
         for _, row in month_data.iterrows():
-            g_color, g_msg = get_grade_info(row['meso_man'])
+            g_color, g_msg = get_grade_info(int(row['stuff']))
             html_list += f'''
                 <div class="mobile-card" style="border-left: 3px solid {g_color};">
                     <div>
