@@ -295,10 +295,10 @@ def render_monthly_calendar(df, target_year, target_month, format_func):
         </style>
     """, unsafe_allow_html=True)
 
-    def get_grade_info(meso):
-        if meso >= 50000: return "#3fb950", "메제 나이쨔!"  # 초록
-        if meso >= 30000: return "#d29922", "도류도급 에바야~"  # 노랑
-        if meso >= 15000: return "#8b949e", "빵미농급 기모띠~"  # 회색
+    def get_grade_info(stuff):
+        if stuff >= 10: return "#3fb950", "메제 나이쨔!"
+        if stuff >= 6: return "#d29922", "도류도급 에바야~"
+        if stuff >= 3: return "#8b949e", "빵미농급 기모띠~"
         return "#484f58", "일안하냐?"
 
     st.subheader(f"📅 {target_year}년 {target_month}월 현황")
@@ -329,7 +329,7 @@ def render_monthly_calendar(df, target_year, target_month, format_func):
                     total_frags = int(day_data['frags'].sum())
                     total_stuff = int(day_data['stuff'].sum())
                     net_revenue = day_data['total_rev'].sum()
-                    g_color, g_msg = get_grade_info(total_meso)
+                    g_color, g_msg = get_grade_info(total_stuff)
 
                     html_cal += f'''
                         <div class="grade-dot" style="background: {g_color}22; color: {g_color}; border: 1px solid {g_color}44;">{g_msg}</div>
